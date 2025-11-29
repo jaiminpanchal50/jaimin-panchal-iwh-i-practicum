@@ -4,6 +4,22 @@ html
         title= `${title}`
         meta(name="viewport" content="width=device-width, initial-scale=1")
         link(rel="stylesheet", href="/css/style.css")
-    body    
-        h1 Contacts
+    body
+        div.main-wrapper    
+            h1 Contacts Data
+            a(href="/update-cobj").button Add to this table
+            div.form-wrapper
+                table.contact-list
+                    thead 
+                        tr
+                            th Name
+                            th Email
+                            th Phone
+                    tbody
+                        each contact in data
+                            tr
+                                td=contact.properties.firstname
+                                td=contact.properties.lastname
+                                td=contact.properties.email
+          
         
