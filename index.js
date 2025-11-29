@@ -19,7 +19,7 @@ app.get('/', async (req, res) => {
     try {
         const resp = await axios.get(contacts, { headers });
         const data = resp.data.results;
-        console.log(data);
+        // console.log(data);
         res.render('homepage', { title: 'Contacts | HubSpot APIs', data });
     } catch (error) {
         console.error(error);
@@ -36,7 +36,49 @@ app.get('/update-cobj', async (req, res) => {
 
 // TODO: ROUTE 3 - Create a new app.post route for the custom objects form to create or update your custom object data. Once executed, redirect the user to the homepage.
 
-// * Code for Route 3 goes here
+app.post('/update-cobj', async (req, res) => {
+    const { firstname, lastname, email } = req.body;
+    console.log('form data', email);
+
+    try {
+        const response = await axios.post(
+            'https://api.hubapi.com/crm/v3/objects/contacts/search',
+            { "filterGroups": [{ "filters": [{ "operator": "EQ", "propertyName": "email", "value": email }] }] },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.PRIVATE_APP_ACCESS}`,
+                    'Content-Type': 'application/json'
+                }
+            },
+        );
+        const data = await response.data.results;
+        // console.log(data);
+        if (data.length > 0) {
+            res.status(200).send('Contact with this email already exists. No new contact created.');
+            console.log('Contact exists:',);
+        } else {
+            const response = await axios.post(
+                'https://api.hubapi.com/crm/v3/objects/contacts',
+                {
+                    "properties": { firstname, lastname, email }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.PRIVATE_APP_ACCESS}`,
+                        'Content-Type': 'application/json'
+                    }
+                },
+            );
+
+            console.log('New contact created:', response.data);
+            res.redirect('/');
+        }
+
+    } catch (error) {
+        console.error('Error creating or updating contact:', error);
+    }
+
+});
 
 
 

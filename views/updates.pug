@@ -4,7 +4,24 @@ html
         title= `${title}`
         meta(name="viewport" content="width=device-width, initial-scale=1")
         link(rel="stylesheet", href="/css/style.css")
-    body    
-        h1 Add Custom Object Data
-        a(href="/").button Return to the homepage
+    body
+        div.main-wrapper       
+            h1 Add Custom Object Data
+            a(href="/").button Return to the homepage
+            form.form-wrapper(action="/update-cobj" method="POST")
+                div.row
+                        input(type="text" id="firstname" name="firstname" required placeholder="First Name")
+                        br
+                        input(type="text" id="lastname" name="lastname" required placeholder="Last Name")
+                        br
+                div.row                
+                        input(type="email" id="email" name="email" required placeholder="Email")
+                div.row
+                        input(type="text" id="name" name="bike_name" required placeholder="Bike Name")
+                        br
+                        input(type="text" id="company" name="bike_brand" required placeholder="Bike Company")
+                div.row
+                        input(type="number" id="price" name="bike_price" required placeholder="Bike Price")
+                        br
+                button(type="submit") Submit
         
