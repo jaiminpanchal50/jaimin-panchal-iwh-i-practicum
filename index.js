@@ -37,10 +37,11 @@ app.get('/update-cobj', async (req, res) => {
 // TODO: ROUTE 3 - Create a new app.post route for the custom objects form to create or update your custom object data. Once executed, redirect the user to the homepage.
 
 app.post('/update-cobj', async (req, res) => {
-    const { firstname, lastname, email } = req.body;
-    console.log('form data', email);
+    const { firstname, lastname, email, bike_name, bike_brand, bike_price } = req.body;
+    // console.log('form data', email);
 
     try {
+        let contactId = null;
         const response = await axios.post(
             'https://api.hubapi.com/crm/v3/objects/contacts/search',
             { "filterGroups": [{ "filters": [{ "operator": "EQ", "propertyName": "email", "value": email }] }] },
@@ -54,8 +55,8 @@ app.post('/update-cobj', async (req, res) => {
         const data = await response.data.results;
         // console.log(data);
         if (data.length > 0) {
+            contactId = data[0].id;
             res.status(200).send('Contact with this email already exists. No new contact created.');
-            console.log('Contact exists:',);
         } else {
             const response = await axios.post(
                 'https://api.hubapi.com/crm/v3/objects/contacts',
@@ -70,7 +71,41 @@ app.post('/update-cobj', async (req, res) => {
                 },
             );
 
-            console.log('New contact created:', response.data);
+            // console.log('New contact created:', response.data);
+            contactId = response.data.id;
+            // console.log('New contact created with ID:', contactId);
+
+            const addBike = await axios.post(
+                'https://api.hubapi.com/crm/v3/objects/2-221898858',
+                {
+                    "properties": { bike_name, bike_brand, bike_price }
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.PRIVATE_APP_ACCESS}`,
+                        'Content-Type': 'application/json'
+                    }
+                },
+            );
+
+            const bikeID = addBike.data.id;
+            // console.log('New Bike created with ID:', bikeID);
+
+
+
+
+            await axios.put(
+                `https://api.hubapi.com/crm/v4/objects/2-221898858/${bikeID}/associations/default/contacts/${contactId}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.PRIVATE_APP_ACCESS}`,
+                        'Content-Type': 'application/json'
+                    }
+                },
+            );
+
+            console.log(`Bike with ID ${bikeID} associated with Contact ID ${contactId}`);
             res.redirect('/');
         }
 
