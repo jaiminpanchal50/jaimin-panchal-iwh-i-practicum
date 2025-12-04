@@ -11,20 +11,53 @@ app.use(express.json());
 // TODO: ROUTE 1 - Create a new app.get route for the homepage to call your custom object data. Pass this data along to the front-end and create a new pug template in the views folder.
 
 app.get('/', async (req, res) => {
-    const contacts = 'https://api.hubspot.com/crm/v3/objects/contacts';
+    const contacts = 'https://api.hubapi.com/crm/v3/objects/2-221898858?properties=bike_name&properties=bike_brand&properties=bike_price&associations=contacts';
     const headers = {
         Authorization: `Bearer ${process.env.PRIVATE_APP_ACCESS}`,
         'Content-Type': 'application/json'
-    }
+    };
+
     try {
         const resp = await axios.get(contacts, { headers });
-        const data = resp.data.results;
-        // console.log(data);
-        res.render('homepage', { title: 'Contacts | HubSpot APIs', data });
+        const customObjects = resp.data.results;
+
+        // Enrich each custom object with contact data
+        const enrichedData = await Promise.all(
+            customObjects.map(async (ele) => {
+                const contactData = [];
+
+                if (ele?.associations?.contacts?.results) {
+                    for (const item of ele.associations.contacts.results) {
+                        try {
+                            const response = await axios.get(
+                                `https://api.hubapi.com/crm/v3/objects/contacts/${item.id}`,
+                                { headers }
+                            );
+                            // console.log('Contact Response:', response.data);
+                            contactData.push(response.data);
+                        } catch (error) {
+                            console.error(`Error fetching contact ${item.id}:`, error.response?.data || error.message);
+                            contactData.push({ id: item.id, error: 'Failed to fetch' });
+                        }
+                    }
+                }
+
+                return {
+                    ...ele,
+                    associatedContacts: contactData
+                };
+            })
+        );
+
+
+        console.log('Enriched Data:', enrichedData);
+        res.render('homepage', { data: enrichedData });
     } catch (error) {
-        console.error(error);
+        console.error('Main API error:', error);
+        res.status(500).send('Error fetching data');
     }
 });
+
 
 
 // TODO: ROUTE 2 - Create a new app.get route for the form to create or update new custom object data. Send this data along in the next route.
@@ -56,8 +89,9 @@ app.post('/update-cobj', async (req, res) => {
         // console.log(data);
         if (data.length > 0) {
             contactId = data[0].id;
-            res.status(200).send('Contact with this email already exists. No new contact created.');
+            res.status(200).send('Contact with this email already exists');
         } else {
+            // create new contact record
             const response = await axios.post(
                 'https://api.hubapi.com/crm/v3/objects/contacts',
                 {
@@ -75,6 +109,8 @@ app.post('/update-cobj', async (req, res) => {
             contactId = response.data.id;
             // console.log('New contact created with ID:', contactId);
 
+
+            // Create custom object data
             const addBike = await axios.post(
                 'https://api.hubapi.com/crm/v3/objects/2-221898858',
                 {
@@ -92,7 +128,7 @@ app.post('/update-cobj', async (req, res) => {
             // console.log('New Bike created with ID:', bikeID);
 
 
-
+            // association code 
 
             await axios.put(
                 `https://api.hubapi.com/crm/v4/objects/2-221898858/${bikeID}/associations/default/contacts/${contactId}`,
@@ -105,7 +141,7 @@ app.post('/update-cobj', async (req, res) => {
                 },
             );
 
-            console.log(`Bike with ID ${bikeID} associated with Contact ID ${contactId}`);
+            // console.log(`Bike with ID ${bikeID} associated with Contact ID ${contactId}`);
             res.redirect('/');
         }
 
